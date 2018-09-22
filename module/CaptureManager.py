@@ -1,17 +1,20 @@
+
 import cv2
-import numpy as np
+import numpy
 import time
+
 
 class CaptureManager(object):
     
-    def __init__(self, capture, previewWindowManager = None, shouldMirrorPreview = False):
+    def __init__(self, capture, previewWindowManager = None,
+                 shouldMirrorPreview = False):
+        
         self.previewWindowManager = previewWindowManager
-        self.shouldMirrrorPreview = shouldMirrorPreview
+        self.shouldMirrorPreview = shouldMirrorPreview
         
         self._capture = capture
         self._channel = 0
         self._enteredFrame = False
-        
         self._frame = None
         self._imageFilename = None
         self._videoFilename = None
@@ -21,7 +24,7 @@ class CaptureManager(object):
         self._startTime = None
         self._framesElapsed = int(0)
         self._fpsEstimate = None
-        
+    
     @property
     def channel(self):
         return self._channel
@@ -34,7 +37,10 @@ class CaptureManager(object):
     
     @property
     def frame(self):
-        if self._enteredFrame and self_.frame is None:
+        if self._enteredFrame and self._frame is None:
+            # As of OpenCV 3.0, VideoCapture.retrieve() no longer supports
+            # the channel argument.
+            # _, self._frame = self._capture.retrieve(channel = self.channel)
             _, self._frame = self._capture.retrieve()
         return self._frame
     
@@ -49,82 +55,88 @@ class CaptureManager(object):
     def enterFrame(self):
         """Capture the next frame, if any."""
         
-        #but first, check that any previous frame was exited.
-        assert not self._enteredFrame, 'previous enteredFrame() had no matching exitFrame()'
+        # But first, check that any previous frame was exited.
+        assert not self._enteredFrame, \
+            'previous enterFrame() had no matching exitFrame()'
         
         if self._capture is not None:
             self._enteredFrame = self._capture.grab()
-            
+    
     def exitFrame(self):
         """Draw to the window. Write to files. Release the frame."""
         
-        #Check wether any grabbed frame is retrievale
-        #The getter may reetrieve and cache the frame
-        if self._frame is None:
+        # Check whether any grabbed frame is retrievable.
+        # The getter may retrieve and cache the frame.
+        if self.frame is None:
             self._enteredFrame = False
             return
-        _framesElapsed
-        #Update the FPS estimate and related variables.
+        
+        # Update the FPS estimate and related variables.
         if self._framesElapsed == 0:
             self._startTime = time.time()
         else:
             timeElapsed = time.time() - self._startTime
-        self._fpsEstimate = self._frameElapsed / timeElapsed
+            self._fpsEstimate =  self._framesElapsed / timeElapsed
+        self._framesElapsed += 1
         
-        self._frameElapsed += 1
-
+        # Draw to the window, if any.
         if self.previewWindowManager is not None:
-            if self.shuldMirrorPreview:
-                mirroredFrame = np.fliplr(self._frame).copy()
+            if self.shouldMirrorPreview:
+                mirroredFrame = numpy.fliplr(self._frame).copy()
                 self.previewWindowManager.show(mirroredFrame)
             else:
                 self.previewWindowManager.show(self._frame)
-
-        #Write to the image file, if any.
+        
+        # Write to the image file, if any.
         if self.isWritingImage:
-            cv2.imwrite(self._imageFileName, self._frame)
+            cv2.imwrite(self._imageFilename, self._frame)
             self._imageFilename = None
-
-        #Write to the video file, if any
+        
+        # Write to the video file, if any.
         self._writeVideoFrame()
-
-        #Release the frame.
+        
+        # Release the frame.
         self._frame = None
         self._enteredFrame = False
-        
-            
-    def writeImage(self, fileframe):
+    
+    def writeImage(self, filename):
         """Write the next exited frame to an image file."""
         self._imageFilename = filename
+    
     def startWritingVideo(
-                self, filename,
-                encoding = cv2.VideoWriter_fourcc('I','4','2','0')):
+            self, filename,
+            encoding = cv2.VideoWriter_fourcc('M','P','P','G')):
         """Start writing exited frames to a video file."""
         self._videoFilename = filename
         self._videoEncoding = encoding
-        
+    
     def stopWritingVideo(self):
         """Stop writing exited frames to a video file."""
         self._videoFilename = None
-        self._videoEncodeing = None
+        self._videoEncoding = None
         self._videoWriter = None
+    
+    def _writeVideoFrame(self):
         
-    def _writerVideoFrame(self):
-        
-        if not seelf.iswritingVideo:
+        if not self.isWritingVideo:
             return
         
         if self._videoWriter is None:
             fps = self._capture.get(cv2.CAP_PROP_FPS)
-            if fps == 0.0:
-                #The capture`s FPS is unknown so use an estimate.
-                if self.frameElapsed < 20:
-                    #Wait until more frames elapsed so that the estimate is more stable.
+            if fps <= 0.0:
+                # The capture's FPS is unknown so use an estimate.
+                if self._framesElapsed < 20:
+                    # Wait until more frames elapse so that the
+                    # estimate is more stable.
                     return
                 else:
                     fps = self._fpsEstimate
-            size = (int(self._capture.get(cv2.CAP_PROP_FRAME_WIDTH)),
-                    int(self._capture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-            self._videoWriter = cv2.VideoWriter(self._videoFilename, self._videoEncoding, fps, size)
-        self._videoWriter.write(self._frame)
+            size = (int(self._capture.get(
+                        cv2.CAP_PROP_FRAME_WIDTH)),
+                    int(self._capture.get(
+                        cv2.CAP_PROP_FRAME_HEIGHT)))
+            self._videoWriter = cv2.VideoWriter(
+                self._videoFilename, self._videoEncoding,
+                fps, size)
         
+        self._videoWriter.write(self._frame)
