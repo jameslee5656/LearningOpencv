@@ -1,6 +1,6 @@
 import cv2
 import numpy
-import utils
+from module import util
 
 
 def recolorRC(src, dst):
@@ -110,20 +110,20 @@ class VFuncFilter(object):
     
     def __init__(self, vFunc = None, dtype = numpy.uint8):
         length = numpy.iinfo(dtype).max + 1
-        self._vLookupArray = utils.createLookupArray(vFunc, length)
+        self._vLookupArray = util.createLookupArray(vFunc, length)
     
     def apply(self, src, dst):
         """Apply the filter with a BGR or gray source/destination."""
-        srcFlatView = utils.flatView(src)
-        dstFlatView = utils.flatView(dst)
-        utils.applyLookupArray(self._vLookupArray, srcFlatView,
+        srcFlatView = util.flatView(src)
+        dstFlatView = util.flatView(dst)
+        util.applyLookupArray(self._vLookupArray, srcFlatView,
                                dstFlatView)
 
 class VCurveFilter(VFuncFilter):
     """A filter that applies a curve to V (or all of BGR)."""
     
     def __init__(self, vPoints, dtype = numpy.uint8):
-        VFuncFilter.__init__(self, utils.createCurveFunc(vPoints),
+        VFuncFilter.__init__(self, util.createCurveFunc(vPoints),
                              dtype)
 
 
@@ -133,19 +133,19 @@ class BGRFuncFilter(object):
     def __init__(self, vFunc = None, bFunc = None, gFunc = None,
                  rFunc = None, dtype = numpy.uint8):
         length = numpy.iinfo(dtype).max + 1
-        self._bLookupArray = utils.createLookupArray(
-            utils.createCompositeFunc(bFunc, vFunc), length)
-        self._gLookupArray = utils.createLookupArray(
-            utils.createCompositeFunc(gFunc, vFunc), length)
-        self._rLookupArray = utils.createLookupArray(
-            utils.createCompositeFunc(rFunc, vFunc), length)
+        self._bLookupArray = util.createLookupArray(
+            util.createCompositeFunc(bFunc, vFunc), length)
+        self._gLookupArray = util.createLookupArray(
+            util.createCompositeFunc(gFunc, vFunc), length)
+        self._rLookupArray = util.createLookupArray(
+            util.createCompositeFunc(rFunc, vFunc), length)
     
     def apply(self, src, dst):
         """Apply the filter with a BGR source/destination."""
         b, g, r = cv2.split(src)
-        utils.applyLookupArray(self._bLookupArray, b, b)
-        utils.applyLookupArray(self._gLookupArray, g, g)
-        utils.applyLookupArray(self._rLookupArray, r, r)
+        util.applyLookupArray(self._bLookupArray, b, b)
+        util.applyLookupArray(self._gLookupArray, g, g)
+        util.applyLookupArray(self._rLookupArray, r, r)
         cv2.merge([b, g, r], dst)
 
 class BGRCurveFilter(BGRFuncFilter):
@@ -154,10 +154,10 @@ class BGRCurveFilter(BGRFuncFilter):
     def __init__(self, vPoints = None, bPoints = None,
                  gPoints = None, rPoints = None, dtype = numpy.uint8):
         BGRFuncFilter.__init__(self,
-                               utils.createCurveFunc(vPoints),
-                               utils.createCurveFunc(bPoints),
-                               utils.createCurveFunc(gPoints),
-                               utils.createCurveFunc(rPoints), dtype)
+                               util.createCurveFunc(vPoints),
+                               util.createCurveFunc(bPoints),
+                               util.createCurveFunc(gPoints),
+                               util.createCurveFunc(rPoints), dtype)
 
 class BGRCrossProcessCurveFilter(BGRCurveFilter):
     """A filter that applies cross-process-like curves to BGR."""
